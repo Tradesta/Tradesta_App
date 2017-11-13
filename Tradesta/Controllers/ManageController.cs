@@ -7,6 +7,8 @@ using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin.Security;
 using Tradesta.Models;
+using OtpSharp;
+using Base32;
 
 namespace Tradesta.Controllers
 {
@@ -63,6 +65,7 @@ namespace Tradesta.Controllers
                 : message == ManageMessageId.RemovePhoneSuccess ? "Your phone number was removed."
                 : "";
 
+            var user = await UserManager.FindByIdAsync(User.Identity.GetUserId());
             var userId = User.Identity.GetUserId();
             var model = new IndexViewModel
             {
@@ -70,7 +73,8 @@ namespace Tradesta.Controllers
                 PhoneNumber = await UserManager.GetPhoneNumberAsync(userId),
                 TwoFactor = await UserManager.GetTwoFactorEnabledAsync(userId),
                 Logins = await UserManager.GetLoginsAsync(userId),
-                BrowserRemembered = await AuthenticationManager.TwoFactorBrowserRememberedAsync(userId)
+                BrowserRemembered = await AuthenticationManager.TwoFactorBrowserRememberedAsync(userId),
+                IsGoogleAuthenticatorEnabled = user.IsGoogleAuthenticatorEnabled
             };
             return View(model);
         }
@@ -158,6 +162,38 @@ namespace Tradesta.Controllers
                 await SignInManager.SignInAsync(user, isPersistent: false, rememberBrowser: false);
             }
             return RedirectToAction("Index", "Manage");
+        }
+
+        public async Task<ActionResult> DisableGoogleAuthenticator()
+        {
+            var user = await UserManager.FindByIdAsync(User.Identity.GetUserId());
+            if (user != null)
+            {
+                user.IsGoogleAuthenticatorEnabled = false;
+                user.GoogleAuthenticatorSecretKey = null;
+                user.TwoFactorEnabled = false;
+
+                await UserManager.UpdateAsync(user);
+            }
+            return RedirectToAction("Index", "Manage");
+        }
+
+        [HttpGet]
+        public ActionResult EnableGoogleAuthenticator()
+        {
+            byte[] secretKey = KeyGeneration.GenerateRandomKey(20);
+            string userName = User.Identity.GetUserName();
+            string issuer = "Tradesta";
+            string issuerEncoded = HttpUtility.UrlEncode(issuer);
+            string barcodeUrl = KeyUrl.GetTotpUrl(secretKey, userName) + "&issuer=" + issuerEncoded;
+
+            var model = new GoogleAuthenticatorViewModel
+            {
+                SecretKey = Base32Encoder.Encode(secretKey),
+                BarcodeUrl = barcodeUrl
+            };
+
+            return View(model);
         }
 
         //

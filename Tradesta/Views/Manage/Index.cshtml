@@ -83,5 +83,18 @@
                     }
                 }*@
         </dd>
+        <dt>
+            Google Authenticator:
+        </dt>
+        <dd>
+            @if (Model.IsGoogleAuthenticatorEnabled)
+            {
+                @Html.ActionLink("[Disable]", "DisableGoogleAuthenticator")
+            }
+            else
+            {
+                @Html.ActionLink("[Enable]", "EnableGoogleAuthenticator")
+            }
+        </dd>
     </dl>
 </div>

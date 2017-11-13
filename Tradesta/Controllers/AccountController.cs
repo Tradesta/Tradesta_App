@@ -73,6 +73,8 @@ namespace Tradesta.Controllers
                 return View(model);
             }
 
+
+
             // Require the user to have a confirmed email before they can log on.
             var user = await UserManager.FindByNameAsync(model.Email);
             if (user != null)
@@ -90,7 +92,7 @@ namespace Tradesta.Controllers
 
             // This doesn't count login failures towards account lockout
             // To enable password failures to trigger account lockout, change to shouldLockout: true
-            var result = await SignInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, shouldLockout: false);
+            var result = await SignInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, shouldLockout: true);
             switch (result)
             {
                 case SignInStatus.Success:
@@ -201,6 +203,19 @@ namespace Tradesta.Controllers
         }
 
         //
+        [AllowAnonymous]
+        public ActionResult UnconfirmedEmail()
+        {
+            ResendValidationEmailViewModel ViewModel = new ResendValidationEmailViewModel();
+            if (TempData["UserId"] != null)
+            {
+                int userId = (int)TempData["UserId"];
+                ViewModel.UserId = userId;
+            }
+            return View(ViewModel);
+        }
+
+        //
         // GET: /Account/ForgotPassword
         [AllowAnonymous]
         public ActionResult ForgotPassword()
@@ -308,6 +323,18 @@ namespace Tradesta.Controllers
                 return View("Error");
             }
             var userFactors = await UserManager.GetValidTwoFactorProvidersAsync(userId);
+
+            // If there's only one provider, don't make the user select it
+            if (userFactors.Count == 1)
+            {
+                return RedirectToAction("VerifyCode", new
+                {
+                    Provider = userFactors[0],
+                    ReturnUrl = returnUrl,
+                    RememberMe = rememberMe
+                });
+            }
+
             var factorOptions = userFactors.Select(purpose => new SelectListItem { Text = purpose, Value = purpose }).ToList();
             return View(new SendCodeViewModel { Providers = factorOptions, ReturnUrl = returnUrl, RememberMe = rememberMe });
         }
@@ -334,71 +361,71 @@ namespace Tradesta.Controllers
 
         //
         // GET: /Account/ExternalLoginCallback
-        [AllowAnonymous]
-        public async Task<ActionResult> ExternalLoginCallback(string returnUrl)
-        {
-            var loginInfo = await AuthenticationManager.GetExternalLoginInfoAsync();
-            if (loginInfo == null)
-            {
-                return RedirectToAction("Login");
-            }
+        //[AllowAnonymous]
+        //public async Task<ActionResult> ExternalLoginCallback(string returnUrl)
+        //{
+        //    var loginInfo = await AuthenticationManager.GetExternalLoginInfoAsync();
+        //    if (loginInfo == null)
+        //    {
+        //        return RedirectToAction("Login");
+        //    }
 
-            // Sign in the user with this external login provider if the user already has a login
-            var result = await SignInManager.ExternalSignInAsync(loginInfo, isPersistent: false);
-            switch (result)
-            {
-                case SignInStatus.Success:
-                    return RedirectToLocal(returnUrl);
-                case SignInStatus.LockedOut:
-                    return View("Lockout");
-                case SignInStatus.RequiresVerification:
-                    return RedirectToAction("SendCode", new { ReturnUrl = returnUrl, RememberMe = false });
-                case SignInStatus.Failure:
-                default:
-                    // If the user does not have an account, then prompt the user to create an account
-                    ViewBag.ReturnUrl = returnUrl;
-                    ViewBag.LoginProvider = loginInfo.Login.LoginProvider;
-                    return View("ExternalLoginConfirmation", new ExternalLoginConfirmationViewModel { Email = loginInfo.Email });
-            }
-        }
+        //    // Sign in the user with this external login provider if the user already has a login
+        //    var result = await SignInManager.ExternalSignInAsync(loginInfo, isPersistent: false);
+        //    switch (result)
+        //    {
+        //        case SignInStatus.Success:
+        //            return RedirectToLocal(returnUrl);
+        //        case SignInStatus.LockedOut:
+        //            return View("Lockout");
+        //        case SignInStatus.RequiresVerification:
+        //            return RedirectToAction("SendCode", new { ReturnUrl = returnUrl, RememberMe = false });
+        //        case SignInStatus.Failure:
+        //        default:
+        //            // If the user does not have an account, then prompt the user to create an account
+        //            ViewBag.ReturnUrl = returnUrl;
+        //            ViewBag.LoginProvider = loginInfo.Login.LoginProvider;
+        //            return View("ExternalLoginConfirmation", new ExternalLoginConfirmationViewModel { Email = loginInfo.Email });
+        //    }
+        //}
 
         //
         // POST: /Account/ExternalLoginConfirmation
-        [HttpPost]
-        [AllowAnonymous]
-        [ValidateAntiForgeryToken]
-        public async Task<ActionResult> ExternalLoginConfirmation(ExternalLoginConfirmationViewModel model, string returnUrl)
-        {
-            if (User.Identity.IsAuthenticated)
-            {
-                return RedirectToAction("Index", "Manage");
-            }
+        //[HttpPost]
+        //[AllowAnonymous]
+        //[ValidateAntiForgeryToken]
+        //public async Task<ActionResult> ExternalLoginConfirmation(ExternalLoginConfirmationViewModel model, string returnUrl)
+        //{
+        //    if (User.Identity.IsAuthenticated)
+        //    {
+        //        return RedirectToAction("Index", "Manage");
+        //    }
 
-            if (ModelState.IsValid)
-            {
-                // Get the information about the user from the external login provider
-                var info = await AuthenticationManager.GetExternalLoginInfoAsync();
-                if (info == null)
-                {
-                    return View("ExternalLoginFailure");
-                }
-                var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
-                var result = await UserManager.CreateAsync(user);
-                if (result.Succeeded)
-                {
-                    result = await UserManager.AddLoginAsync(user.Id, info.Login);
-                    if (result.Succeeded)
-                    {
-                        await SignInManager.SignInAsync(user, isPersistent: false, rememberBrowser: false);
-                        return RedirectToLocal(returnUrl);
-                    }
-                }
-                AddErrors(result);
-            }
+        //    if (ModelState.IsValid)
+        //    {
+        //        // Get the information about the user from the external login provider
+        //        var info = await AuthenticationManager.GetExternalLoginInfoAsync();
+        //        if (info == null)
+        //        {
+        //            return View("ExternalLoginFailure");
+        //        }
+        //        var user = new ApplicationUser { UserName = model.Email, Email = model.Email };
+        //        var result = await UserManager.CreateAsync(user);
+        //        if (result.Succeeded)
+        //        {
+        //            result = await UserManager.AddLoginAsync(user.Id, info.Login);
+        //            if (result.Succeeded)
+        //            {
+        //                await SignInManager.SignInAsync(user, isPersistent: false, rememberBrowser: false);
+        //                return RedirectToLocal(returnUrl);
+        //            }
+        //        }
+        //        AddErrors(result);
+        //    }
 
-            ViewBag.ReturnUrl = returnUrl;
-            return View(model);
-        }
+        //    ViewBag.ReturnUrl = returnUrl;
+        //    return View(model);
+        //}
 
         //
         // POST: /Account/LogOff
@@ -412,31 +439,31 @@ namespace Tradesta.Controllers
 
         //
         // GET: /Account/ExternalLoginFailure
-        [AllowAnonymous]
-        public ActionResult ExternalLoginFailure()
-        {
-            return View();
-        }
+        //[AllowAnonymous]
+        //public ActionResult ExternalLoginFailure()
+        //{
+        //    return View();
+        //}
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                if (_userManager != null)
-                {
-                    _userManager.Dispose();
-                    _userManager = null;
-                }
+        //protected override void Dispose(bool disposing)
+        //{
+        //    if (disposing)
+        //    {
+        //        if (_userManager != null)
+        //        {
+        //            _userManager.Dispose();
+        //            _userManager = null;
+        //        }
 
-                if (_signInManager != null)
-                {
-                    _signInManager.Dispose();
-                    _signInManager = null;
-                }
-            }
+        //        if (_signInManager != null)
+        //        {
+        //            _signInManager.Dispose();
+        //            _signInManager = null;
+        //        }
+        //    }
 
-            base.Dispose(disposing);
-        }
+        //    base.Dispose(disposing);
+        //}
 
         private async Task<string> SendEmailConfirmationTokenAsync(string userID, string subject)
         {
