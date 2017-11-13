@@ -22,8 +22,8 @@ namespace Tradesta
         public async Task SendAsync(IdentityMessage iMessage)
 
         {
-
-            var client = new SendGridClient(ConfigurationManager.AppSettings["SendGrid_MailSend"]); // https://app.sendgrid.com
+            var apiKey = System.Environment.GetEnvironmentVariable("SendGrid_MailSend");
+            var client = new SendGridClient(apiKey); // https://app.sendgrid.com
 
             var msg = new SendGridMessage()
 
