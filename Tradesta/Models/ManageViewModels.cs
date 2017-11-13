@@ -88,7 +88,7 @@ namespace Tradesta.Models
     {
         public string SecretKey { get; set; }
         public string BarcodeUrl { get; set; }
-        public string code { get; set; }
+        public string Code { get; set; }
 
     }
     
