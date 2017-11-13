@@ -83,7 +83,7 @@ namespace Tradesta.Controllers
 
                     // Uncomment to debug locally  
                     // ViewBag.Link = callbackUrl;
-                    ViewBag.errorMessage = "You must have a confirmed email to log on.";
+                    ViewBag.errorMessage = "You must have a confirmed email to log on, a confirmation email has been resent to your registered email";
                     return View("Error");
                 }
             }
